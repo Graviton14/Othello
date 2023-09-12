@@ -1,18 +1,17 @@
-import cs251.lab2.*;
+import cs251.lab2.OthelloGUI;
+import cs251.lab2.OthelloInterface;
 
+/**
+ * The type Othello.
+ */
 public class Othello implements OthelloInterface {
-    public static void main(String[] args) {
-        Othello game = new Othello();
-        if (args.length>0) {
-            game.initComputerPlayer(args[0]);
-        }
-        OthelloGUI.showGUI(game);
-    }
-
     private StringBuilder boardString;
     private Piece currentPlayer;
     private Piece[][] boardState;
 
+    /**
+     * Instantiates a new Othello.
+     */
     public Othello() {
         // Initialize the boardState array with the default size.
         boardState = new Piece[DEFAULT_SIZE][DEFAULT_SIZE];
@@ -23,6 +22,19 @@ public class Othello implements OthelloInterface {
                 boardState[i][j] = Piece.EMPTY;
             }
         }
+    }
+
+    /**
+     * The entry point of application.
+     *
+     * @param args the input arguments
+     */
+    public static void main(String[] args) {
+        Othello game = new Othello();
+        if (args.length > 0) {
+            game.initComputerPlayer(args[0]);
+        }
+        OthelloGUI.showGUI(game);
     }
 
     /**
@@ -105,6 +117,7 @@ public class Othello implements OthelloInterface {
 
     /**
      * Handle a player's click at the specified coordinates.
+     *
      * @param x The x-coordinate of the clicked cell.
      * @param y The y-coordinate of the clicked cell.
      * @return The game result after the move.
@@ -155,6 +168,7 @@ public class Othello implements OthelloInterface {
 
     /**
      * Helper method to check if the game is over.
+     *
      * @return The game result (WHITE_WINS, BLACK_WINS, DRAW, or GAME_NOT_OVER).
      */
     private Result checkGameOver() {
