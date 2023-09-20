@@ -1,13 +1,28 @@
+/**
+ * Henry Fricke
+ * Lab 2: Othello
+ * 9/13/2023
+ * CS251
+ */
+
 import cs251.lab2.OthelloGUI;
 import cs251.lab2.OthelloInterface;
+import javax.swing.*;
 import java.util.Random;
 
+/**
+ * The Othello class implements the Othello game logic and interface.
+ */
 public class Othello implements OthelloInterface {
-    private StringBuilder boardString;
-    private Piece currentPlayer;
-    private Piece[][] boardState;
-    private boolean playerTurn = true;
+    private static boolean computerState = false; // Flag to indicate if the computer is enabled
+    private StringBuilder boardString; // String representation of the game board
+    private Piece currentPlayer; // The current player (DARK or LIGHT)
+    private Piece[][] boardState; // 2D array to represent the game board
+    private Timer timer; // Timer for delaying the computer's move
 
+    /**
+     * Initializes a new Othello game instance.
+     */
     public Othello() {
         boardState = new Piece[DEFAULT_SIZE][DEFAULT_SIZE];
         for (int i = 0; i < DEFAULT_SIZE; i++) {
@@ -15,8 +30,20 @@ public class Othello implements OthelloInterface {
                 boardState[i][j] = Piece.EMPTY;
             }
         }
+
+        timer = new Timer(150, e -> {
+            // Code to execute after the delay (1 second)
+            makeComputerMove();
+            timer.stop(); // Stop the timer after the action is performed
+        });
+        timer.setRepeats(false); // Set to non-repeating, so it triggers only once
     }
 
+    /**
+     * The main entry point of the Othello application.
+     *
+     * @param args Command-line arguments (optional).
+     */
     public static void main(String[] args) {
         Othello game = new Othello();
         if (args.length > 0) {
@@ -33,7 +60,6 @@ public class Othello implements OthelloInterface {
     @Override
     public void initGame() {
         boardString = new StringBuilder();
-        currentPlayer = Piece.DARK;
         boardState = new Piece[DEFAULT_SIZE][DEFAULT_SIZE];
         for (int i = 0; i < DEFAULT_SIZE; i++) {
             for (int j = 0; j < DEFAULT_SIZE; j++) {
@@ -51,6 +77,7 @@ public class Othello implements OthelloInterface {
                 }
             }
         }
+        currentPlayer = Piece.DARK;
     }
 
     @Override
@@ -72,10 +99,73 @@ public class Othello implements OthelloInterface {
 
     @Override
     public Result handleClickAt(int x, int y) {
+        if (currentPlayer == Piece.DARK || currentPlayer == Piece.LIGHT) {
+            if (checkGameOver() == Result.DARK_WINS || checkGameOver() == Result.LIGHT_WINS) {
+                return checkGameOver();
+            }
+            if (isLegal(x, y)) {
+                makeMove(x, y);
+
+                // Print a message indicating the player's move
+                System.out.println("Player flipped (" + x + ", " + y + ").");
+
+                currentPlayer = (currentPlayer == Piece.DARK) ? Piece.LIGHT : Piece.DARK;
+
+                // Start the timer to delay the computer's move
+                timer.start();
+
+                return checkGameOver();
+            }
+            return checkGameOver();
+        }
+        return checkGameOver();
+    }
+
+    /**
+     * Checks the game over conditions and returns the game result.
+     *
+     * @return The game result (DRAW, DARK_WINS, LIGHT_WINS, or GAME_NOT_OVER).
+     */
+    private Result checkGameOver() {
+        int legalMoves = 0;
+        int darkPieces = 0;
+        int lightPieces = 0;
+
+        for (int i = 0; i < DEFAULT_SIZE; i++) {
+            for (int j = 0; j < DEFAULT_SIZE; j++) {
+                if (isLegal(i, j)) {
+                    legalMoves++;
+                }
+                if (boardState[i][j] == Piece.DARK) {
+                    darkPieces++;
+                } else if (boardState[i][j] == Piece.LIGHT) {
+                    lightPieces++;
+                }
+            }
+        }
+        if (legalMoves > 0) {
+            return Result.GAME_NOT_OVER;
+        } else {
+            if (darkPieces > lightPieces) {
+                return Result.DARK_WINS;
+            } else if (lightPieces > darkPieces) {
+                return Result.LIGHT_WINS;
+            }
+        }
+        return Result.GAME_NOT_OVER;
+    }
+
+    /**
+     * Makes a move on the board and flips pieces as necessary.
+     *
+     * @param x The X coordinate of the move.
+     * @param y The Y coordinate of the move.
+     */
+    private void makeMove(int x, int y) {
         if (isLegal(x, y)) {
             int[][] directions = {
                     {-1, -1}, {-1, 0}, {-1, 1},
-                    {0, -1}, /* Center */ {0, 1},
+                    {0, -1}, {0, 1},
                     {1, -1}, {1, 0}, {1, 1}
             };
 
@@ -85,18 +175,19 @@ public class Othello implements OthelloInterface {
                 int posX = x + dx;
                 int posY = y + dy;
 
-                if (posX < 0 || posX >= DEFAULT_SIZE || posY < 0 || posY >= DEFAULT_SIZE || boardState[posX][posY] != (currentPlayer == Piece.DARK ? Piece.LIGHT : Piece.DARK)) {
-                    continue;
-                }
+                boolean flipped = false;
 
-                while (posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE && boardState[posX][posY] == (currentPlayer == Piece.DARK ? Piece.LIGHT : Piece.DARK)) {
+                while (posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE &&
+                        boardState[posX][posY] == (currentPlayer == Piece.DARK ? Piece.LIGHT : Piece.DARK)) {
                     posX += dx;
                     posY += dy;
+                    flipped = true;
                 }
 
-                if (posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE && boardState[posX][posY] == currentPlayer) {
-                    int flipX = x;
-                    int flipY = y;
+                if (flipped && posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE &&
+                        boardState[posX][posY] == currentPlayer) {
+                    int flipX = x + dx;
+                    int flipY = y + dy;
                     while (flipX != posX || flipY != posY) {
                         boardState[flipX][flipY] = currentPlayer;
                         boardString.setCharAt(flipX * DEFAULT_SIZE + flipY, currentPlayer.toChar());
@@ -106,44 +197,82 @@ public class Othello implements OthelloInterface {
                 }
             }
 
-            boardState[x][y] = getCurrentTurn();
-            boardString.setCharAt(x * DEFAULT_SIZE + y, getCurrentTurn().toChar());
-            currentPlayer = (currentPlayer == Piece.DARK) ? Piece.LIGHT : Piece.DARK;
-            playerTurn = false;
-            return checkGameOver();
-        } else {
-            return Result.GAME_NOT_OVER;
+            boardState[x][y] = currentPlayer;
+            boardString.setCharAt(x * DEFAULT_SIZE + y, currentPlayer.toChar());
         }
     }
 
-    private Result checkGameOver() {
-        int darkCount = 0;
-        int lightCount = 0;
-        int emptyCount = 0;
-
-        for (int i = 0; i < DEFAULT_SIZE; i++) {
-            for (int j = 0; j < DEFAULT_SIZE; j++) {
-                if (boardState[i][j] == Piece.DARK) {
-                    darkCount++;
-                } else if (boardState[i][j] == Piece.LIGHT) {
-                    lightCount++;
-                } else if (boardState[i][j] == Piece.EMPTY) {
-                    emptyCount++;
+    /**
+     * Handles the computer's move, including flipping pieces.
+     */
+    private void makeComputerMove() {
+        int[] legalMoves = new int[DEFAULT_SIZE * DEFAULT_SIZE];
+        int numLegalMoves = 0;
+        if (computerState) {
+            for (int i = 0; i < DEFAULT_SIZE; i++) {
+                for (int j = 0; j < DEFAULT_SIZE; j++) {
+                    if (isLegal(i, j)) {
+                        legalMoves[numLegalMoves] = i * DEFAULT_SIZE + j;
+                        numLegalMoves++;
+                    }
                 }
             }
         }
 
-        if (darkCount + lightCount == DEFAULT_SIZE * DEFAULT_SIZE || emptyCount == 0) {
-            if (darkCount > lightCount) {
-                return Result.DARK_WINS;
-            } else if (lightCount > darkCount) {
-                return Result.LIGHT_WINS;
-            } else {
-                return Result.DRAW;
+        if (numLegalMoves > 0) {
+            int randomIndex = new Random().nextInt(numLegalMoves);
+            int move = legalMoves[randomIndex];
+            int x = move / DEFAULT_SIZE;
+            int y = move % DEFAULT_SIZE;
+
+            // Flipping pieces for the computer move directly here
+            int[][] directions = {
+                    {-1, -1}, {-1, 0}, {-1, 1},
+                    {0, -1}, {0, 1},
+                    {1, -1}, {1, 0}, {1, 1}
+            };
+
+            for (int[] dir : directions) {
+                int dx = dir[0];
+                int dy = dir[1];
+                int posX = x + dx;
+                int posY = y + dy;
+
+                boolean flipped = false;
+
+                while (posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE &&
+                        boardState[posX][posY] == (currentPlayer == Piece.DARK ? Piece.LIGHT : Piece.DARK)) {
+                    posX += dx;
+                    posY += dy;
+                    flipped = true;
+                }
+
+                if (flipped && posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE &&
+                        boardState[posX][posY] == currentPlayer) {
+                    int flipX = x + dx;
+                    int flipY = y + dy;
+                    while (flipX != posX || flipY != posY) {
+                        boardState[flipX][flipY] = currentPlayer;
+                        boardString.setCharAt(flipX * DEFAULT_SIZE + flipY, currentPlayer.toChar());
+                        flipX += dx;
+                        flipY += dy;
+                    }
+
+                    // Flip the new piece itself
+                    boardState[x][y] = currentPlayer;
+                    boardString.setCharAt(x * DEFAULT_SIZE + y, currentPlayer.toChar());
+                }
+            }
+            System.out.println("AI flipped (" + x + ", " + y + ").");
+            currentPlayer = Piece.DARK;
+
+            // Check if the game is over after the computer move
+            Result result = checkGameOver();
+            if (result != Result.GAME_NOT_OVER) {
+                // The game is over, handle the result here
+                System.out.println("Game Over! Result: " + result);
             }
         }
-
-        return Result.GAME_NOT_OVER;
     }
 
     @Override
@@ -164,24 +293,37 @@ public class Othello implements OthelloInterface {
             int posX = x + dx;
             int posY = y + dy;
 
-            if (posX < 0 || posX >= DEFAULT_SIZE || posY < 0 || posY >= DEFAULT_SIZE || boardState[posX][posY] != (currentPlayer == Piece.DARK ? Piece.LIGHT : Piece.DARK)) {
-                continue;
-            }
+            boolean foundOpponentPiece = false;
 
-            while (posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE && boardState[posX][posY] == (currentPlayer == Piece.DARK ? Piece.LIGHT : Piece.DARK)) {
+            while (posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE) {
+                if (boardState[posX][posY] == Piece.EMPTY) {
+                    break;
+                }
+
+                if (boardState[posX][posY] == currentPlayer) {
+                    if (foundOpponentPiece) {
+                        return true;
+                    } else {
+                        break;
+                    }
+                } else {
+                    foundOpponentPiece = true;
+                }
+
                 posX += dx;
                 posY += dy;
-            }
-
-            if (posX >= 0 && posX < DEFAULT_SIZE && posY >= 0 && posY < DEFAULT_SIZE && boardState[posX][posY] == currentPlayer) {
-                return true;
             }
         }
 
         return false;
     }
 
+    /**
+     * Initializes the computer player based on the specified settings.
+     *
+     * @param settings The settings for the computer player ("COMPUTER" or other).
+     */
     public void initComputerPlayer(String settings) {
-        // Implementation for initializing the computer player goes here.
+        computerState = "COMPUTER".equalsIgnoreCase(settings);
     }
 }
